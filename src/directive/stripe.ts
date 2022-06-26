@@ -95,9 +95,12 @@ export const StripeDirectiveHandler = CreateDirectiveHandlerCallback(StripeDirec
             details.specialMounts[argKey] = contextElement;
             elementScope.SetLocal(localKey, CreateInplaceProxy(BuildGetterProxyOptions({
                 getter: (prop) => {
+                    let local = (contextElement.parentElement ? FindComponentById(componentId)?.FindElementLocalValue(contextElement.parentElement, localKey, true) : null);
                     if (prop === 'parent'){
-                        return (contextElement.parentElement ? FindComponentById(componentId)?.FindElementLocalValue(contextElement.parentElement, localKey, true) : null);
+                        return local;
                     }
+
+                    return ((prop && local) ? local[prop] : null);
                 },
                 lookup: ['parent'],
             })));
@@ -106,166 +109,154 @@ export const StripeDirectiveHandler = CreateDirectiveHandlerCallback(StripeDirec
         return;
     }
     
-    if (argKey in StripeKeys){//Bind Stripe field
-        let details = resolvedComponent.FindElementLocalValue(contextElement, detailsKey, true);
-        if (!details){//No parent
-            return;
-        }
+    if (StripeKeys.hasOwnProperty(argKey)){//Bind Stripe field
+        return resolvedComponent.FindElementLocalValue(contextElement, detailsKey, true)?.addField(argKey, contextElement, (field: IStripeField, details: any) => {
+            let resolvedComponent = FindComponentById(componentId), elementScope = resolvedComponent?.FindElementScope(contextElement);
 
-        let id = resolvedComponent.GenerateUniqueId(`${StripeDirectiveName}_proxy_`), field: IStripeField = {
-            name: argKey,
-            mount: contextElement,
-            element: details.elements.create(StripeKeys[argKey], {
-                style: (StripeStyles || undefined),
-                classes: (StripeClasses || undefined),
-            }),
-            ready: false,
-            complete: false,
-            error: undefined,
-        };
-
-        if (!field.element){
-            return;
-        }
-
-        field.element.mount(contextElement);
-        details.fields.push(field);
-
-        elementScope.SetLocal(localKey, CreateInplaceProxy(BuildGetterProxyOptions({
-            getter: (prop) => {
-                if (prop === 'complete'){
-                    FindComponentById(componentId)?.GetBackend().changes.AddGetAccess(`${id}.${prop}`);
-                    return field.complete;
-                }
-
-                if (prop === 'focused'){
-                    FindComponentById(componentId)?.GetBackend().changes.AddGetAccess(`${id}.${prop}`);
-                    return field.focused;
-                }
-
-                if (prop === 'error'){
-                    FindComponentById(componentId)?.GetBackend().changes.AddGetAccess(`${id}.${prop}`);
-                    return field.error;
-                }
-                
-                if (prop === 'parent'){
-                    return (contextElement.parentElement ? FindComponentById(componentId)?.FindElementLocalValue(contextElement.parentElement, localKey, true) : null);
-                }
-
-                if (prop === 'clear'){
-                    return () => {
-                        if (field.element){
-                            field.element.clear();
-                        }
-                    };
-                }
-    
-                if (prop === 'focus'){
-                    return () => {
-                        if (field.element){
-                            field.element.focus();
-                        }
-                    };
-                }
-    
-                if (prop === 'blur'){
-                    return () => {
-                        if (field.element){
-                            field.element.blur();
-                        }
-                    };
-                }
-            },
-            lookup: ['complete', 'focused', 'error', 'parent', 'clear', 'focus', 'blur'],
-        })));
-
-        let fields = details.fields;
-        elementScope.AddUninitCallback(() => {
-            field.element?.destroy();
-            fields.splice(fields.indexOf(field), 1);
-        });
-
-        field.element.on('ready', () => {
-            if (!field.ready){
-                field.ready = true;
-                field.mount.dispatchEvent(new CustomEvent(`${StripeDirectiveName}.ready`));
-                details.onReady();
-            }
-        });
-
-        field.element.on('change', (e) => {
-            if (e?.complete === field.complete){
+            let id = resolvedComponent?.GenerateUniqueId(`${StripeDirectiveName}_proxy_`);
+            if (!field.element){
                 return;
             }
-
-            field.complete = e?.complete;
-            field.mount.dispatchEvent(new CustomEvent(`${StripeDirectiveName}.complete`, {
-                detail: {
-                    completed: e?.complete,
-                },
-            }));
-            
-            if (field.complete){
-                if (field.error){
-                    field.error = undefined;
-                    AddChanges('set', `${id}.error`, 'error', FindComponentById(componentId)?.GetBackend().changes);
-                }
-
-                if (details.options.autofocus){//Focus next if any
-                    let index = details.fields.indexOf(field);
-                    if (index != -1 && index < (details.fields.length - 1)){
-                        let nextField = details.fields[index + 1];
-                        if (nextField.element){
-                            nextField.element.focus();
-                        }
-                        else if ('focus' in nextField.mount && typeof nextField.mount.focus === 'function'){
-                            nextField.mount.focus();
-                        }
+    
+            elementScope?.SetLocal(localKey, CreateInplaceProxy(BuildGetterProxyOptions({
+                getter: (prop) => {
+                    if (prop === 'complete'){
+                        FindComponentById(componentId)?.GetBackend().changes.AddGetAccess(`${id}.${prop}`);
+                        return field.complete;
                     }
-                    else if (details.specialMounts.submit){
-                        details.specialMounts.submit.focus();
+    
+                    if (prop === 'focused'){
+                        FindComponentById(componentId)?.GetBackend().changes.AddGetAccess(`${id}.${prop}`);
+                        return field.focused;
                     }
-                }
-            }
-            else if (e?.error && e.error.message !== field.error){
-                field.error = e.error.message;
-                AddChanges('set', `${id}.error`, 'error', FindComponentById(componentId)?.GetBackend().changes);
-
-                field.mount.dispatchEvent(new CustomEvent(`${StripeDirectiveName}.error`, {
-                    detail: {
-                        message: e.error.message,
-                    },
-                }));
-            }
-
-            details.onChange();
-        });
-
-        field.element.on('focus', () => {
-            if (!field.focused){
-                field.focused = true;
-                AddChanges('set', `${id}.focused`, 'focused', FindComponentById(componentId)?.GetBackend().changes);
-                field.mount.dispatchEvent(new CustomEvent(`${StripeDirectiveName}.focus`, {
-                    detail: {
-                        focused: true,
-                    },
-                }));
-            }
-        });
-
-        field.element.on('blur', () => {
-            if (field.focused){
-                field.focused = false;
-                AddChanges('set', `${id}.focused`, 'focused', FindComponentById(componentId)?.GetBackend().changes);
-                field.mount.dispatchEvent(new CustomEvent(`${StripeDirectiveName}.focus`, {
-                    detail: {
-                        focused: false,
-                    },
-                }));
-            }
-        });
+    
+                    if (prop === 'error'){
+                        FindComponentById(componentId)?.GetBackend().changes.AddGetAccess(`${id}.${prop}`);
+                        return field.error;
+                    }
+                    
+                    if (prop === 'parent'){
+                        return (contextElement.parentElement ? FindComponentById(componentId)?.FindElementLocalValue(contextElement.parentElement, localKey, true) : null);
+                    }
+    
+                    if (prop === 'clear'){
+                        return () => {
+                            if (field.element){
+                                field.element.clear();
+                            }
+                        };
+                    }
         
-        return;
+                    if (prop === 'focus'){
+                        return () => {
+                            if (field.element){
+                                field.element.focus();
+                            }
+                        };
+                    }
+        
+                    if (prop === 'blur'){
+                        return () => {
+                            if (field.element){
+                                field.element.blur();
+                            }
+                        };
+                    }
+
+                    if (prop === 'disable'){
+                        return (state = true) => {
+                            if (field.element){
+                                field.element.update({ disabled: state });
+                            }
+                        };
+                    }
+
+                    let local = (contextElement.parentElement ? FindComponentById(componentId)?.FindElementLocalValue(contextElement.parentElement, localKey, true) : null);
+                    return ((prop && local) ? local[prop] : null);
+                },
+                lookup: ['complete', 'focused', 'error', 'parent', 'clear', 'focus', 'blur', 'disable'],
+            })));
+    
+            field.element.on('ready', () => {
+                if (!field.ready){
+                    field.ready = true;
+                    field.mount.dispatchEvent(new CustomEvent(`${StripeDirectiveName}.ready`));
+                    details.onReady();
+                }
+            });
+    
+            field.element.on('change', (e) => {
+                if (e?.complete === field.complete){
+                    return;
+                }
+    
+                field.complete = e?.complete;
+                field.mount.dispatchEvent(new CustomEvent(`${StripeDirectiveName}.complete`, {
+                    detail: {
+                        completed: e?.complete,
+                    },
+                }));
+                
+                if (field.complete){
+                    if (field.error){
+                        field.error = undefined;
+                        AddChanges('set', `${id}.error`, 'error', FindComponentById(componentId)?.GetBackend().changes);
+                    }
+    
+                    if (details.options.autofocus){//Focus next if any
+                        let index = details.fields.indexOf(field);
+                        if (index != -1 && index < (details.fields.length - 1)){
+                            let nextField = details.fields[index + 1];
+                            if (nextField.element){
+                                nextField.element.focus();
+                            }
+                            else if ('focus' in nextField.mount && typeof nextField.mount.focus === 'function'){
+                                nextField.mount.focus();
+                            }
+                        }
+                        else if (details.specialMounts.submit){
+                            details.specialMounts.submit.focus();
+                        }
+                    }
+                }
+                else if (e?.error && e.error.message !== field.error){
+                    field.error = e.error.message;
+                    AddChanges('set', `${id}.error`, 'error', FindComponentById(componentId)?.GetBackend().changes);
+    
+                    field.mount.dispatchEvent(new CustomEvent(`${StripeDirectiveName}.error`, {
+                        detail: {
+                            message: e.error.message,
+                        },
+                    }));
+                }
+    
+                details.onChange();
+            });
+    
+            field.element.on('focus', () => {
+                if (!field.focused){
+                    field.focused = true;
+                    AddChanges('set', `${id}.focused`, 'focused', FindComponentById(componentId)?.GetBackend().changes);
+                    field.mount.dispatchEvent(new CustomEvent(`${StripeDirectiveName}.focus`, {
+                        detail: {
+                            focused: true,
+                        },
+                    }));
+                }
+            });
+    
+            field.element.on('blur', () => {
+                if (field.focused){
+                    field.focused = false;
+                    AddChanges('set', `${id}.focused`, 'focused', FindComponentById(componentId)?.GetBackend().changes);
+                    field.mount.dispatchEvent(new CustomEvent(`${StripeDirectiveName}.focus`, {
+                        detail: {
+                            focused: false,
+                        },
+                    }));
+                }
+            });
+        });
     }
 
     let stripeInstance: stripe.Stripe | null = null, elements: stripe.elements.Elements | null = null, backlog = new Array<() => void>(), init = () => {
@@ -310,6 +301,33 @@ export const StripeDirectiveHandler = CreateDirectiveHandlerCallback(StripeDirec
     };
 
     let details = { fields, specialMounts, options,
+        addField(key: string, target: HTMLElement, callback: (field: IStripeField, details: any) => void){
+            let add = () => {
+                let field = {
+                    name: key,
+                    mount: target,
+                    element: elements!.create(StripeKeys[key], {
+                        style: (StripeStyles || undefined),
+                        classes: (StripeClasses || undefined),
+                    }),
+                    ready: false,
+                    complete: false,
+                    error: undefined,
+                };
+
+                field.element.mount(target);
+                this.fields.push(field);
+
+                FindComponentById(componentId)?.FindElementScope(target)?.AddUninitCallback(() => {
+                    field.element?.destroy();
+                    this.fields = this.fields.filter(item => (item !== field));
+                });
+                
+                callback(field, this);
+            };
+
+            elements ? add() : backlog.push(add);
+        },
         onReady: () => AddChanges('set', `${id}.readyCount`, 'readyCount', FindComponentById(componentId)?.GetBackend().changes),
         onChange: () => {
             setComplete(!fields.find(field => !field.complete));
@@ -489,9 +507,9 @@ export const StripeDirectiveHandler = CreateDirectiveHandlerCallback(StripeDirec
             }
 
             if (prop === 'setup'){
-                return (clientSecret: string, paymentMethod: string | IStripeBillingDetails, save = false) => {
+                return (clientSecret: string, paymentMethod: string | IStripeBillingDetails) => {
                     payOrSetup(() => {
-                        let paymentDetails = getPaymentDetails(paymentMethod, save);
+                        let paymentDetails = getPaymentDetails(paymentMethod, false);
                         if (paymentDetails){
                             stripeInstance?.confirmCardSetup(clientSecret, paymentDetails).then(onSuccess).catch(onError);
                         }
