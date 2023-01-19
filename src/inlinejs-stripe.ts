@@ -1,5 +1,3 @@
-import { WaitForGlobal } from '@benbraide/inlinejs';
+import { InlineJSStripe } from './entry';
 
-import { StripeDirectiveHandlerCompact } from './directive/stripe';
-
-WaitForGlobal().then(() => StripeDirectiveHandlerCompact());
+InlineJSStripe();
