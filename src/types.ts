@@ -3,8 +3,13 @@ export interface IStripePaymentDetails{
     billingDetails?: stripe.BillingDetails;
 }
 
+export type StripeFieldChangeType = 'error' | 'complete';
+export type StripeFieldChangeHandlerType = (type: StripeFieldChangeType, data: any) => void;
+
 export interface IStripeField{
     WaitReady(): Promise<void>;
+    AddChangeListener(listener: StripeFieldChangeHandlerType): void;
+    RemoveChangeListener(listener: StripeFieldChangeHandlerType): void;
     ToggleFocus(focused: boolean): void;
     Reset(): void;
     AddDetails(details: IStripePaymentDetails): void;

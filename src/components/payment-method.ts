@@ -1,6 +1,6 @@
 import { CustomElement, Property, RegisterCustomElement } from "@benbraide/inlinejs-element";
 
-import { IStripeField, IStripePaymentDetails } from "../types";
+import { IStripeField, IStripePaymentDetails, StripeFieldChangeHandlerType } from "../types";
 
 export class StripePaymentMenthodElement extends CustomElement implements IStripeField{
     @Property({ type: 'object', checkStoredObject: true })
@@ -16,6 +16,10 @@ export class StripePaymentMenthodElement extends CustomElement implements IStrip
     public WaitReady(){
         return Promise.resolve();
     }
+
+    public AddChangeListener(listener: StripeFieldChangeHandlerType){}
+
+    public RemoveChangeListener(listener: StripeFieldChangeHandlerType){}
 
     public ToggleFocus(focused: boolean){}
 

@@ -1,13 +1,14 @@
 import { EvaluateLater, FindAncestor, IElementScopeCreatedCallbackParams, JournalTry } from "@benbraide/inlinejs";
 import { CustomElement, Property, RegisterCustomElement } from "@benbraide/inlinejs-element";
 
-import { IStripeElement, IStripeField, IStripePaymentDetails } from "../types";
+import { IStripeElement, IStripeField, IStripePaymentDetails, StripeFieldChangeHandlerType } from "../types";
 
 export class StripeFieldElement extends CustomElement implements IStripeField{
     protected stripeField_: stripe.elements.Element | null = null;
     
     protected isReady_ = false;
     protected readyWaiters_ = new Array<() => void>();
+    protected changeListeners = new Array<StripeFieldChangeHandlerType>();
 
     @Property({ type: 'object', checkStoredObject: true })
     public stripe: IStripeElement | null = null;
@@ -35,6 +36,15 @@ export class StripeFieldElement extends CustomElement implements IStripeField{
         return new Promise<void>(resolve => {
             this.isReady_ ? resolve() : this.readyWaiters_.push(() => resolve());
         });
+    }
+
+    public AddChangeListener(listener: StripeFieldChangeHandlerType){
+        this.changeListeners.push(listener);
+    }
+
+    public RemoveChangeListener(listener: StripeFieldChangeHandlerType){
+        const index = this.changeListeners.indexOf(listener);
+        (index >= 0) && this.changeListeners.splice(index, 1);
     }
 
     public ToggleFocus(focused: boolean){
@@ -93,6 +103,8 @@ export class StripeFieldElement extends CustomElement implements IStripeField{
                                 expression: this.onerrors,
                                 disableFunctionCall: false,
                             })(undefined, [], { error: event.error });
+
+                            this.changeListeners.forEach(listener => JournalTry(() => listener('error', event.error)));
                         }
                         else if (event?.complete){
                             EvaluateLater({
@@ -102,7 +114,14 @@ export class StripeFieldElement extends CustomElement implements IStripeField{
                                 disableFunctionCall: false,
                             })();
 
+                            this.changeListeners.forEach(listener => JournalTry(() => listener('complete', true)));
                             this.GetStripe_()?.FocusNextField(this);
+                        }
+                        else{
+                            this.changeListeners.forEach((listener) => {
+                                JournalTry(() => listener('complete', false));
+                                JournalTry(() => listener('error', null));
+                            });
                         }
                     });
                     

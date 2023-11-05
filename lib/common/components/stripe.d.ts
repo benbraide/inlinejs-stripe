@@ -11,9 +11,13 @@ export declare class StripeElement extends CustomElement implements IStripeEleme
     protected fields_: Array<IStripeField> | null;
     protected readyFields_: Array<IStripeField> | null;
     protected instanceWaiters_: (() => void)[];
+    protected completeFields_: Array<IStripeField> | null;
+    protected errorFields_: Array<IStripeField> | null;
     options: stripe.elements.ElementsOptions | null;
     publicKey: string;
     onready: string;
+    oncomplete: string;
+    onerrors: string;
     defer: boolean;
     autofocus: boolean;
     constructor();

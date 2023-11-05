@@ -15,6 +15,9 @@ export class StripeElement extends CustomElement implements IStripeElement{
     protected fields_: Array<IStripeField> | null = null;
     protected readyFields_: Array<IStripeField> | null = null;
     protected instanceWaiters_ = new Array<() => void>();
+
+    protected completeFields_: Array<IStripeField> | null = null;
+    protected errorFields_: Array<IStripeField> | null = null;
     
     @Property({ type: 'object', checkStoredObject: true })
     public options: stripe.elements.ElementsOptions | null = null;
@@ -24,6 +27,12 @@ export class StripeElement extends CustomElement implements IStripeElement{
 
     @Property({ type: 'string' })
     public onready = '';
+
+    @Property({ type: 'string' })
+    public oncomplete = '';
+
+    @Property({ type: 'string' })
+    public onerrors = '';
     
     @Property({ type: 'boolean' })
     public defer = false;
@@ -54,6 +63,52 @@ export class StripeElement extends CustomElement implements IStripeElement{
                 
                 this.readyWaiters_.splice(0).forEach(waiter => JournalTry(waiter));
             });
+        });
+
+        field.AddChangeListener((type, data) => {
+            if (type === 'complete'){
+                let changed = false;
+                
+                this.completeFields_ = (this.completeFields_ || []);
+                if (data && !this.completeFields_.includes(field)){
+                    this.completeFields_.push(field);
+                    changed = !!(this.readyFields_ && this.completeFields_.length == this.readyFields_.length);
+                }
+                else if (!data && this.completeFields_.includes(field)){
+                    this.completeFields_ = this.completeFields_.filter(x => x !== field);
+                    changed = (this.completeFields_.length == 0);
+                }
+                
+                changed && this.oncomplete && EvaluateLater({
+                    componentId: this.componentId_,
+                    contextElement: this,
+                    expression: this.oncomplete,
+                    disableFunctionCall: false,
+                })(undefined, [!!data], { complete: !!data });
+            }
+            else if (type === 'error'){
+                let changed = false;
+
+                this.errorFields_ = (this.errorFields_ || []);
+                this.errorFields_.push(field);
+
+                this.errorFields_ = (this.errorFields_ || []);
+                if (data && !this.errorFields_.includes(field)){
+                    this.errorFields_.push(field);
+                    changed = (this.errorFields_.length == 1);
+                }
+                else if (!data && this.errorFields_.includes(field)){
+                    this.errorFields_ = this.errorFields_.filter(x => x !== field);
+                    changed = (this.errorFields_.length == 0);
+                }
+
+                this.onerrors && EvaluateLater({
+                    componentId: this.componentId_,
+                    contextElement: this,
+                    expression: this.onerrors,
+                    disableFunctionCall: false,
+                })(undefined, [data], { error: data });
+            }
         });
     }
 
