@@ -5,6 +5,8 @@ import { IStripeElement, IStripeField, IStripePaymentDetails, StripeFieldChangeH
 export declare class StripeFieldElement extends CustomElement implements IStripeField {
     protected stripeField_: stripe.elements.Element | null;
     protected isReady_: boolean;
+    protected isComplete_: boolean;
+    protected lastError_: stripe.Error | null;
     protected readyWaiters_: (() => void)[];
     protected changeListeners: StripeFieldChangeHandlerType[];
     stripe: IStripeElement | null;

@@ -38,7 +38,7 @@ export class StripeElement extends CustomElement implements IStripeElement{
     public defer = false;
 
     @Property({ type: 'boolean' })
-    public autofocus = false;
+    public focusnext = false;
 
     public constructor(){
         super();
@@ -85,6 +85,8 @@ export class StripeElement extends CustomElement implements IStripeElement{
                     expression: this.oncomplete,
                     disableFunctionCall: false,
                 })(undefined, [!!data], { complete: !!data });
+
+                !!data && this.focusnext && this.FocusNextField(field);
             }
             else if (type === 'error'){
                 let changed = false;
@@ -102,7 +104,7 @@ export class StripeElement extends CustomElement implements IStripeElement{
                     changed = (this.errorFields_.length == 0);
                 }
 
-                this.onerrors && EvaluateLater({
+                changed && this.onerrors && EvaluateLater({
                     componentId: this.componentId_,
                     contextElement: this,
                     expression: this.onerrors,
@@ -118,7 +120,7 @@ export class StripeElement extends CustomElement implements IStripeElement{
     }
 
     public FocusNextField(field: IStripeField){
-        if (this.autofocus && this.fields_){
+        if (this.fields_){
             const index = this.fields_.indexOf(field);
             (index >= 0 && index < this.fields_.length - 1) && this.fields_[index + 1].ToggleFocus(true);
         }

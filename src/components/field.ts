@@ -7,6 +7,9 @@ export class StripeFieldElement extends CustomElement implements IStripeField{
     protected stripeField_: stripe.elements.Element | null = null;
     
     protected isReady_ = false;
+    protected isComplete_ = false;
+    protected lastError_: stripe.Error | null = null;
+    
     protected readyWaiters_ = new Array<() => void>();
     protected changeListeners = new Array<StripeFieldChangeHandlerType>();
 
@@ -96,32 +99,28 @@ export class StripeFieldElement extends CustomElement implements IStripeField{
                     });
 
                     this.stripeField_.on('change', (event) => {
-                        if (event?.error){
+                        if ((event?.error || null) !== this.lastError_){
+                            this.lastError_ = (event?.error || null);
                             EvaluateLater({
                                 componentId: this.componentId_,
                                 contextElement: this,
                                 expression: this.onerrors,
                                 disableFunctionCall: false,
-                            })(undefined, [], { error: event.error });
+                            })(undefined, [this.lastError_], { error: this.lastError_ });
 
-                            this.changeListeners.forEach(listener => JournalTry(() => listener('error', event.error)));
+                            this.changeListeners.forEach(listener => JournalTry(() => listener('error', this.lastError_)));
                         }
-                        else if (event?.complete){
+                        
+                        if ((event?.complete || false) != this.isComplete_){
+                            this.isComplete_ = (event?.complete || false);
                             EvaluateLater({
                                 componentId: this.componentId_,
                                 contextElement: this,
                                 expression: this.oncomplete,
                                 disableFunctionCall: false,
-                            })();
+                            })(undefined, [this.isComplete_], { complete: this.isComplete_ });
 
-                            this.changeListeners.forEach(listener => JournalTry(() => listener('complete', true)));
-                            this.GetStripe_()?.FocusNextField(this);
-                        }
-                        else{
-                            this.changeListeners.forEach((listener) => {
-                                JournalTry(() => listener('complete', false));
-                                JournalTry(() => listener('error', null));
-                            });
+                            this.changeListeners.forEach(listener => JournalTry(() => listener('complete', this.isComplete_)));
                         }
                     });
                     

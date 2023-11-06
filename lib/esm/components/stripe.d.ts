@@ -19,7 +19,7 @@ export declare class StripeElement extends CustomElement implements IStripeEleme
     oncomplete: string;
     onerrors: string;
     defer: boolean;
-    autofocus: boolean;
+    focusnext: boolean;
     constructor();
     AddStripeField(field: IStripeField): void;
     RemoveStripeField(field: IStripeField): void;
