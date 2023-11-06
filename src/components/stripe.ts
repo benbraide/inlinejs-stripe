@@ -76,7 +76,7 @@ export class StripeElement extends CustomElement implements IStripeElement{
                 }
                 else if (!data && this.completeFields_.includes(field)){
                     this.completeFields_ = this.completeFields_.filter(x => x !== field);
-                    changed = (this.completeFields_.length == 0);
+                    changed = !!(this.readyFields_ && (this.completeFields_.length == (this.readyFields_.length - 1)));
                 }
                 
                 changed && this.oncomplete && EvaluateLater({
