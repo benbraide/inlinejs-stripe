@@ -1,8 +1,9 @@
-import { CustomElement, Property, RegisterCustomElement } from "@benbraide/inlinejs-element";
+import { Property, RegisterCustomElement } from "@benbraide/inlinejs-element";
 
-import { IStripeField, IStripePaymentDetails, StripeFieldChangeHandlerType } from "../types";
+import { IStripePaymentDetails } from "../types";
+import { StripeGenericField } from "./generic-field";
 
-export class StripeDetailElement extends CustomElement implements IStripeField{
+export class StripeDetailElement extends StripeGenericField{
     @Property({ type: 'object', checkStoredObject: true })
     public input: HTMLInputElement | null = null;
 
@@ -15,14 +16,6 @@ export class StripeDetailElement extends CustomElement implements IStripeField{
     public constructor(){
         super();
     }
-
-    public WaitReady(){
-        return Promise.resolve();
-    }
-
-    public AddChangeListener(listener: StripeFieldChangeHandlerType){}
-
-    public RemoveChangeListener(listener: StripeFieldChangeHandlerType){}
 
     public ToggleFocus(focused: boolean){
         const input = this.GetInput_();

@@ -1,9 +1,10 @@
-import { EvaluateLater, FindAncestor, IElementScopeCreatedCallbackParams, JournalTry } from "@benbraide/inlinejs";
-import { CustomElement, Property, RegisterCustomElement } from "@benbraide/inlinejs-element";
+import { EvaluateLater, IElementScopeCreatedCallbackParams, JournalTry } from "@benbraide/inlinejs";
+import { Property, RegisterCustomElement } from "@benbraide/inlinejs-element";
 
-import { IStripeElement, IStripeField, IStripePaymentDetails, StripeFieldChangeHandlerType } from "../types";
+import { IStripePaymentDetails, StripeFieldChangeHandlerType } from "../types";
+import { StripeGenericField } from "./generic-field";
 
-export class StripeFieldElement extends CustomElement implements IStripeField{
+export class StripeFieldElement extends StripeGenericField{
     protected stripeField_: stripe.elements.Element | null = null;
     
     protected isReady_ = false;
@@ -13,9 +14,6 @@ export class StripeFieldElement extends CustomElement implements IStripeField{
     protected readyWaiters_ = new Array<() => void>();
     protected changeListeners = new Array<StripeFieldChangeHandlerType>();
 
-    @Property({ type: 'object', checkStoredObject: true })
-    public stripe: IStripeElement | null = null;
-    
     @Property({ type: 'object', checkStoredObject: true })
     public options: stripe.elements.ElementsOptions | null = null;
 
@@ -63,14 +61,11 @@ export class StripeFieldElement extends CustomElement implements IStripeField{
     }
 
     protected HandleElementScopeCreated_({ scope, ...rest }: IElementScopeCreatedCallbackParams, postAttributesCallback?: () => void){
-        super.HandleElementScopeCreated_({ scope, ...rest }, () => {
-            this.GetStripe_()?.AddStripeField(this);
-            postAttributesCallback && postAttributesCallback();
-        });
+        super.HandleElementScopeCreated_({ scope, ...rest }, postAttributesCallback);
 
         scope.AddPostProcessCallback(() => {
-            this.GetStripe_()?.WaitInstance().then((stripe) => {
-                if (!stripe){
+            this.GetStripe_()?.WaitInstance().then((details) => {
+                if (!details?.stripe){
                     return;
                 }
 
@@ -82,8 +77,8 @@ export class StripeFieldElement extends CustomElement implements IStripeField{
                     type = this.type;
                 }
 
-                if (type){
-                    this.stripeField_ = stripe.elements().create((type as stripe.elements.elementsType), (this.options || this.GetStripe_()?.options || undefined));
+                if (type && details.elements){
+                    this.stripeField_ = details.elements.create((type as stripe.elements.elementsType), (this.options || this.GetStripe_()?.options || undefined));
 
                     this.stripeField_.on('ready', () => {
                         this.isReady_ = true;
@@ -133,10 +128,6 @@ export class StripeFieldElement extends CustomElement implements IStripeField{
             this.GetStripe_()?.RemoveStripeField(this);
             this.stripeField_ = null;
         });
-    }
-
-    protected GetStripe_(){
-        return (this.stripe || FindAncestor<IStripeElement>(this, ancestor => ('AddStripeField' in ancestor)));
     }
 }
 

@@ -1,9 +1,10 @@
 /// <reference types="stripe-v3" />
 import { IElementScopeCreatedCallbackParams } from "@benbraide/inlinejs";
 import { CustomElement } from "@benbraide/inlinejs-element";
-import { IStripeElement, IStripeField } from "../types";
+import { IStripeDetails, IStripeElement, IStripeField } from "../types";
 export declare class StripeElement extends CustomElement implements IStripeElement {
     protected stripe_: stripe.Stripe | null;
+    protected elements_: stripe.elements.Elements | null;
     protected mounting_: boolean;
     protected mounted_: boolean;
     protected isReady_: boolean;
@@ -24,8 +25,9 @@ export declare class StripeElement extends CustomElement implements IStripeEleme
     AddStripeField(field: IStripeField): void;
     RemoveStripeField(field: IStripeField): void;
     FocusNextField(field: IStripeField): void;
+    GetDetails(): IStripeDetails;
     GetInstance(): stripe.Stripe | null;
-    WaitInstance(): Promise<stripe.Stripe | null>;
+    WaitInstance(): Promise<IStripeDetails | null>;
     Mount(): void;
     Pay(clientSecret: string, save?: boolean): Promise<false | stripe.PaymentIntentResponse>;
     Setup(clientSecret: string): Promise<false | stripe.PaymentIntentResponse>;

@@ -1,10 +1,11 @@
 import { EvaluateLater, IElementScopeCreatedCallbackParams, JournalTry } from "@benbraide/inlinejs";
 import { CustomElement, Property, RegisterCustomElement } from "@benbraide/inlinejs-element";
 
-import { IStripeElement, IStripeField, IStripePaymentDetails } from "../types";
+import { IStripeDetails, IStripeElement, IStripeField, IStripePaymentDetails } from "../types";
 
 export class StripeElement extends CustomElement implements IStripeElement{
     protected stripe_: stripe.Stripe | null = null;
+    protected elements_: stripe.elements.Elements | null = null;
 
     protected mounting_ = false;
     protected mounted_ = false;
@@ -126,13 +127,20 @@ export class StripeElement extends CustomElement implements IStripeElement{
         }
     }
 
+    public GetDetails(): IStripeDetails{
+        return {
+            stripe: this.stripe_,
+            elements: this.elements_,
+        };
+    }
+
     public GetInstance(){
         return this.stripe_;
     }
 
     public WaitInstance(){
-        return new Promise<stripe.Stripe | null>(resolve => {
-            this.mounted_ ? resolve(this.stripe_) : this.instanceWaiters_.push(() => resolve(this.stripe_));
+        return new Promise<IStripeDetails | null>(resolve => {
+            this.mounted_ ? resolve(this.GetDetails()) : this.instanceWaiters_.push(() => resolve(this.GetDetails()));
         });
     }
 
@@ -147,6 +155,8 @@ export class StripeElement extends CustomElement implements IStripeElement{
             this.mounted_ = true;
 
             this.stripe_ = Stripe(this.publicKey);
+            this.elements_ = this.stripe_.elements();
+            
             this.instanceWaiters_.splice(0).forEach(waiter => JournalTry(waiter));
         });
     }
@@ -173,40 +183,40 @@ export class StripeElement extends CustomElement implements IStripeElement{
 
     protected PayOrSetup_(pay: boolean, clientSecret: string, save = false){
         return new Promise<stripe.PaymentIntentResponse | false>((resolve, reject) => {
-            this.WaitInstance().then((stripe) => {
-                if (!stripe){
+            this.WaitInstance().then((details) => {
+                if (!details?.stripe){
                     return resolve(false);
                 }
 
-                const details: IStripePaymentDetails = {};
-                this.fields_?.forEach(field => field.AddDetails(details));
+                const paymentDetails: IStripePaymentDetails = {};
+                this.fields_?.forEach(field => field.AddDetails(paymentDetails));
 
-                if (!details.method){
+                if (!paymentDetails.method){
                     return resolve(false);
                 }
 
                 let cardDetails: stripe.ConfirmCardPaymentData;
-                if (typeof details.method !== 'string'){
+                if (typeof paymentDetails.method !== 'string'){
                     cardDetails = {
                         payment_method: {
-                            card: details.method,
-                            billing_details: details.billingDetails,
+                            card: paymentDetails.method,
+                            billing_details: paymentDetails.billingDetails,
                         },
                     };
                 }
                 else{
                     cardDetails = {
-                        payment_method: details.method,
+                        payment_method: paymentDetails.method,
                     };
                 }
 
                 if (pay){
-                    details.billingDetails?.email && (cardDetails.receipt_email = details.billingDetails.email);
+                    paymentDetails.billingDetails?.email && (cardDetails.receipt_email = paymentDetails.billingDetails.email);
                     save && (cardDetails.setup_future_usage = 'off_session');
-                    stripe.confirmCardPayment(clientSecret, cardDetails).then(resolve).catch(reject);
+                    details.stripe.confirmCardPayment(clientSecret, cardDetails).then(resolve).catch(reject);
                 }
                 else{
-                    stripe.confirmCardSetup(clientSecret, cardDetails).then(resolve).catch(reject);
+                    details.stripe.confirmCardSetup(clientSecret, cardDetails).then(resolve).catch(reject);
                 }
             }).catch(reject);
         });

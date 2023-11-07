@@ -15,12 +15,18 @@ export interface IStripeField{
     AddDetails(details: IStripePaymentDetails): void;
 }
 
+export interface IStripeDetails{
+    stripe: stripe.Stripe | null;
+    elements: stripe.elements.Elements | null;
+}
+
 export interface IStripeElement{
     options: stripe.elements.ElementsOptions | null;
     AddStripeField(field: IStripeField): void;
     RemoveStripeField(field: IStripeField): void;
     FocusNextField(field: IStripeField): void;
+    GetDetails(): IStripeDetails | null;
     GetInstance(): stripe.Stripe | null;
-    WaitInstance(): Promise<stripe.Stripe | null>;
+    WaitInstance(): Promise<IStripeDetails | null>;
     Mount(): void;
 }

@@ -1,15 +1,14 @@
 /// <reference types="stripe-v3" />
 import { IElementScopeCreatedCallbackParams } from "@benbraide/inlinejs";
-import { CustomElement } from "@benbraide/inlinejs-element";
-import { IStripeElement, IStripeField, IStripePaymentDetails, StripeFieldChangeHandlerType } from "../types";
-export declare class StripeFieldElement extends CustomElement implements IStripeField {
+import { IStripePaymentDetails, StripeFieldChangeHandlerType } from "../types";
+import { StripeGenericField } from "./generic-field";
+export declare class StripeFieldElement extends StripeGenericField {
     protected stripeField_: stripe.elements.Element | null;
     protected isReady_: boolean;
     protected isComplete_: boolean;
     protected lastError_: stripe.Error | null;
     protected readyWaiters_: (() => void)[];
     protected changeListeners: StripeFieldChangeHandlerType[];
-    stripe: IStripeElement | null;
     options: stripe.elements.ElementsOptions | null;
     type: string;
     onready: string;
@@ -23,6 +22,5 @@ export declare class StripeFieldElement extends CustomElement implements IStripe
     Reset(): void;
     AddDetails(details: IStripePaymentDetails): void;
     protected HandleElementScopeCreated_({ scope, ...rest }: IElementScopeCreatedCallbackParams, postAttributesCallback?: () => void): void;
-    protected GetStripe_(): IStripeElement | null;
 }
 export declare function StripeFieldElementCompact(): void;
