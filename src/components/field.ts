@@ -33,6 +33,10 @@ export class StripeFieldElement extends StripeGenericField{
         super();
     }
 
+    public IsInteractive(){
+        return true;
+    }
+
     public WaitReady(){
         return new Promise<void>(resolve => {
             this.isReady_ ? resolve() : this.readyWaiters_.push(() => resolve());

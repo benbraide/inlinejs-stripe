@@ -7,6 +7,10 @@ export class StripeGenericField extends CustomElement implements IStripeField{
     @Property({ type: 'object', checkStoredObject: true })
     public stripe: IStripeElement | null = null;
 
+    public IsInteractive(){
+        return false;
+    }
+
     public WaitReady(){
         return Promise.resolve();
     }

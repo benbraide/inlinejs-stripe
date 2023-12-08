@@ -17,6 +17,7 @@ export class StripeElement extends CustomElement implements IStripeElement{
     protected readyFields_: Array<IStripeField> | null = null;
     protected instanceWaiters_ = new Array<() => void>();
 
+    protected interactiveFields_: Array<IStripeField> | null = null;
     protected completeFields_: Array<IStripeField> | null = null;
     protected errorFields_: Array<IStripeField> | null = null;
     
@@ -52,6 +53,12 @@ export class StripeElement extends CustomElement implements IStripeElement{
         field.WaitReady().then(() => {
             this.readyFields_ = (this.readyFields_ || []);
             this.readyFields_.push(field);
+
+            if (field.IsInteractive()){
+                this.interactiveFields_ = (this.interactiveFields_ || []);
+                this.interactiveFields_.push(field);
+            }
+            
             (this.fields_ && this.readyFields_ && this.fields_.length <= this.readyFields_.length) && JournalTry(() => {
                 this.isReady_ = true;
                 
@@ -73,11 +80,11 @@ export class StripeElement extends CustomElement implements IStripeElement{
                 this.completeFields_ = (this.completeFields_ || []);
                 if (data && !this.completeFields_.includes(field)){
                     this.completeFields_.push(field);
-                    changed = !!(this.readyFields_ && this.completeFields_.length == this.readyFields_.length);
+                    changed = !!(this.interactiveFields_ && this.completeFields_.length == this.interactiveFields_.length);
                 }
                 else if (!data && this.completeFields_.includes(field)){
                     this.completeFields_ = this.completeFields_.filter(x => x !== field);
-                    changed = !!(this.readyFields_ && (this.completeFields_.length == (this.readyFields_.length - 1)));
+                    changed = !!(this.interactiveFields_ && (this.completeFields_.length == (this.interactiveFields_.length - 1)));
                 }
                 
                 changed && this.oncomplete && EvaluateLater({
@@ -118,6 +125,9 @@ export class StripeElement extends CustomElement implements IStripeElement{
     public RemoveStripeField(field: IStripeField){
         this.fields_ && (this.fields_ = this.fields_.filter(x => x !== field));
         this.readyFields_ && (this.readyFields_ = this.readyFields_.filter(x => x !== field));
+        this.interactiveFields_ && (this.interactiveFields_ = this.interactiveFields_.filter(x => x !== field));
+        this.completeFields_ && (this.completeFields_ = this.completeFields_.filter(x => x !== field));
+        this.errorFields_ && (this.errorFields_ = this.errorFields_.filter(x => x !== field));
     }
 
     public FocusNextField(field: IStripeField){

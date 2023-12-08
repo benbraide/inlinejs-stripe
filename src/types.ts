@@ -7,6 +7,7 @@ export type StripeFieldChangeType = 'error' | 'complete';
 export type StripeFieldChangeHandlerType = (type: StripeFieldChangeType, data: any) => void;
 
 export interface IStripeField{
+    IsInteractive(): boolean;
     WaitReady(): Promise<void>;
     AddChangeListener(listener: StripeFieldChangeHandlerType): void;
     RemoveChangeListener(listener: StripeFieldChangeHandlerType): void;
