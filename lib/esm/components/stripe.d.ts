@@ -17,9 +17,9 @@ export declare class StripeElement extends CustomElement implements IStripeEleme
     protected errorFields_: Array<IStripeField> | null;
     options: stripe.elements.ElementsOptions | null;
     publicKey: string;
-    onready: string;
-    oncomplete: string;
-    onerrors: string;
+    oncustomready: string;
+    oncustomcomplete: string;
+    oncustomerror: string;
     defer: boolean;
     focusnext: boolean;
     constructor();

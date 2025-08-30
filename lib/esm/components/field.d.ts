@@ -11,9 +11,9 @@ export declare class StripeFieldElement extends StripeGenericField {
     protected changeListeners: StripeFieldChangeHandlerType[];
     options: stripe.elements.ElementsOptions | null;
     type: string;
-    onready: string;
-    oncomplete: string;
-    onerrors: string;
+    oncustomready: string;
+    oncustomcomplete: string;
+    oncustomerror: string;
     constructor();
     IsInteractive(): boolean;
     WaitReady(): Promise<void>;

@@ -28,13 +28,13 @@ export class StripeElement extends CustomElement implements IStripeElement{
     public publicKey = '';
 
     @Property({ type: 'string' })
-    public onready = '';
+    public oncustomready = '';
 
     @Property({ type: 'string' })
-    public oncomplete = '';
+    public oncustomcomplete = '';
 
     @Property({ type: 'string' })
-    public onerrors = '';
+    public oncustomerror = '';
     
     @Property({ type: 'boolean' })
     public defer = false;
@@ -58,14 +58,14 @@ export class StripeElement extends CustomElement implements IStripeElement{
                 this.interactiveFields_ = (this.interactiveFields_ || []);
                 this.interactiveFields_.push(field);
             }
-            
+
             (this.fields_ && this.readyFields_ && this.fields_.length <= this.readyFields_.length) && JournalTry(() => {
                 this.isReady_ = true;
                 
-                this.onready && EvaluateLater({
+                this.oncustomready && EvaluateLater({
                     componentId: this.componentId_,
                     contextElement: this,
-                    expression: this.onready,
+                    expression: this.oncustomready,
                     disableFunctionCall: false,
                 })();
                 
@@ -86,11 +86,11 @@ export class StripeElement extends CustomElement implements IStripeElement{
                     this.completeFields_ = this.completeFields_.filter(x => x !== field);
                     changed = !!(this.interactiveFields_ && (this.completeFields_.length == (this.interactiveFields_.length - 1)));
                 }
-                
-                changed && this.oncomplete && EvaluateLater({
+
+                changed && this.oncustomcomplete && EvaluateLater({
                     componentId: this.componentId_,
                     contextElement: this,
-                    expression: this.oncomplete,
+                    expression: this.oncustomcomplete,
                     disableFunctionCall: false,
                 })(undefined, [!!data], { complete: !!data });
 
@@ -112,10 +112,10 @@ export class StripeElement extends CustomElement implements IStripeElement{
                     changed = (this.errorFields_.length == 0);
                 }
 
-                changed && this.onerrors && EvaluateLater({
+                changed && this.oncustomerror && EvaluateLater({ // Removed redundant 'params' argument
                     componentId: this.componentId_,
                     contextElement: this,
-                    expression: this.onerrors,
+                    expression: this.oncustomerror,
                     disableFunctionCall: false,
                 })(undefined, [data], { error: data });
             }
@@ -206,17 +206,17 @@ export class StripeElement extends CustomElement implements IStripeElement{
                 }
 
                 let cardDetails: stripe.ConfirmCardPaymentData;
-                if (typeof paymentDetails.method !== 'string'){
+                if (typeof paymentDetails.method === 'string'){ // Payment Method ID
+                    cardDetails = {
+                        payment_method: paymentDetails.method,
+                    };
+                }
+                else { // Stripe Element (e.g., CardElement)
                     cardDetails = {
                         payment_method: {
                             card: paymentDetails.method,
                             billing_details: paymentDetails.billingDetails,
                         },
-                    };
-                }
-                else{
-                    cardDetails = {
-                        payment_method: paymentDetails.method,
                     };
                 }
 

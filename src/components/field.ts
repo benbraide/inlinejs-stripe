@@ -1,4 +1,4 @@
-import { EvaluateLater, IElementScopeCreatedCallbackParams, JournalTry } from "@benbraide/inlinejs";
+import { EvaluateLater, IElementScopeCreatedCallbackParams, JournalError, JournalTry, JournalWarn } from "@benbraide/inlinejs";
 import { Property, RegisterCustomElement } from "@benbraide/inlinejs-element";
 
 import { IStripePaymentDetails, StripeFieldChangeHandlerType } from "../types";
@@ -21,13 +21,13 @@ export class StripeFieldElement extends StripeGenericField{
     public type = '';
     
     @Property({ type: 'string' })
-    public onready = '';
+    public oncustomready = '';
 
     @Property({ type: 'string' })
-    public oncomplete = '';
+    public oncustomcomplete = '';
 
     @Property({ type: 'string' })
-    public onerrors = '';
+    public oncustomerror = '';
 
     public constructor(){
         super();
@@ -69,7 +69,7 @@ export class StripeFieldElement extends StripeGenericField{
 
         scope.AddPostProcessCallback(() => {
             this.GetStripe_()?.WaitInstance().then((details) => {
-                if (!details?.stripe){
+                if (!details?.stripe || !details.elements){
                     return;
                 }
 
@@ -81,51 +81,54 @@ export class StripeFieldElement extends StripeGenericField{
                     type = this.type;
                 }
 
-                if (type && details.elements){
-                    this.stripeField_ = details.elements.create((type as stripe.elements.elementsType), (this.options || this.GetStripe_()?.options || undefined));
+                if (!type){
+                    JournalWarn('The element type provided is invalid.', 'StripeField.Mount', this);
+                    return;
+                }
+                
+                this.stripeField_ = details.elements.create((type as stripe.elements.elementsType), (this.options || this.GetStripe_()?.options || undefined));
 
-                    this.stripeField_.on('ready', () => {
-                        this.isReady_ = true;
+                this.stripeField_.on('ready', () => {
+                    this.isReady_ = true;
 
-                        this.onready && EvaluateLater({
+                    this.oncustomready && EvaluateLater({
+                        componentId: this.componentId_,
+                        contextElement: this,
+                        expression: this.oncustomready,
+                        disableFunctionCall: false,
+                    })();
+                    
+                    this.readyWaiters_.splice(0).forEach(waiter => JournalTry(waiter));
+                });
+
+                this.stripeField_.on('change', (event) => {
+                    if ((event?.error || null) !== this.lastError_){
+                        this.lastError_ = (event?.error || null);
+                        this.oncustomerror && EvaluateLater({
                             componentId: this.componentId_,
                             contextElement: this,
-                            expression: this.onready,
+                            expression: this.oncustomerror,
                             disableFunctionCall: false,
-                        })();
-                        
-                        this.readyWaiters_.splice(0).forEach(waiter => JournalTry(waiter));
-                    });
+                        })(undefined, [this.lastError_], { error: this.lastError_ });
 
-                    this.stripeField_.on('change', (event) => {
-                        if ((event?.error || null) !== this.lastError_){
-                            this.lastError_ = (event?.error || null);
-                            EvaluateLater({
-                                componentId: this.componentId_,
-                                contextElement: this,
-                                expression: this.onerrors,
-                                disableFunctionCall: false,
-                            })(undefined, [this.lastError_], { error: this.lastError_ });
-
-                            this.changeListeners.forEach(listener => JournalTry(() => listener('error', this.lastError_)));
-                        }
-                        
-                        if ((event?.complete || false) != this.isComplete_){
-                            this.isComplete_ = (event?.complete || false);
-                            EvaluateLater({
-                                componentId: this.componentId_,
-                                contextElement: this,
-                                expression: this.oncomplete,
-                                disableFunctionCall: false,
-                            })(undefined, [this.isComplete_], { complete: this.isComplete_ });
-
-                            this.changeListeners.forEach(listener => JournalTry(() => listener('complete', this.isComplete_)));
-                        }
-                    });
+                        this.changeListeners.forEach(listener => JournalTry(() => listener('error', this.lastError_)));
+                    }
                     
-                    this.stripeField_.mount(this);
-                }
-            });
+                    if ((event?.complete || false) != this.isComplete_){
+                        this.isComplete_ = (event?.complete || false);
+                        this.oncustomcomplete && EvaluateLater({
+                            componentId: this.componentId_,
+                            contextElement: this,
+                            expression: this.oncustomcomplete,
+                            disableFunctionCall: false,
+                        })(undefined, [this.isComplete_], { complete: this.isComplete_ });
+
+                        this.changeListeners.forEach(listener => JournalTry(() => listener('complete', this.isComplete_)));
+                    }
+                });
+                
+                this.stripeField_.mount(this);
+            }).catch(err => JournalError(err, 'StripeField.Mount', this));
         });
 
         scope.AddUninitCallback(() => {

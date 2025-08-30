@@ -10,12 +10,8 @@ export class StripeDetailElement extends StripeGenericField{
     @Property({ type: 'string' })
     public name = '';
 
-    @Property({ type: 'string' })
-    public value = '';
-
-    public constructor(){
-        super();
-    }
+    @Property({ type: 'string', checkStoredObject: true })
+    public value: any = '';
 
     public ToggleFocus(focused: boolean){
         const input = this.GetInput_();
@@ -34,12 +30,17 @@ export class StripeDetailElement extends StripeGenericField{
         }
         
         details.billingDetails = (details.billingDetails || {});
-        if (this.name === 'address'){
-            details.billingDetails.address = (details.billingDetails.address || {});
-            details.billingDetails.address.line1 = (input?.value || this.value);
-        }
-        else{
+        
+        const nameParts = this.name.split('.');
+        if (nameParts.length == 1){
             details.billingDetails[this.name] = (input?.value || this.value);
+        }
+        else{//Path
+            let current: Record<string, any> = details.billingDetails;
+            nameParts.slice(0, -1).forEach((part) => {
+                current = (current[part] = (current[part] || {}));
+            });
+            current[nameParts.slice(-1)[0]] = (input?.value || this.value);
         }
     }
 
