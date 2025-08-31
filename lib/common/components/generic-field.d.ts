@@ -1,4 +1,3 @@
-import { IElementScopeCreatedCallbackParams } from "@benbraide/inlinejs";
 import { CustomElement } from "@benbraide/inlinejs-element";
 import { IStripeElement, IStripeField, IStripePaymentDetails, StripeFieldChangeHandlerType } from "../types";
 export declare class StripeGenericField extends CustomElement implements IStripeField {
@@ -10,6 +9,6 @@ export declare class StripeGenericField extends CustomElement implements IStripe
     ToggleFocus(focused: boolean): void;
     Reset(): void;
     AddDetails(details: IStripePaymentDetails): void;
-    protected HandleElementScopeCreated_({ scope, ...rest }: IElementScopeCreatedCallbackParams, postAttributesCallback?: () => void): void;
+    protected HandlePostAttributesProcessPostfix_(): void;
     protected GetStripe_(): IStripeElement | null;
 }

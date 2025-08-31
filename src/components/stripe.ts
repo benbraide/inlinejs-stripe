@@ -1,4 +1,4 @@
-import { EvaluateLater, IElementScopeCreatedCallbackParams, JournalTry } from "@benbraide/inlinejs";
+import { EvaluateLater, IElementScope, JournalTry } from "@benbraide/inlinejs";
 import { CustomElement, Property, RegisterCustomElement } from "@benbraide/inlinejs-element";
 
 import { IStripeDetails, IStripeElement, IStripeField, IStripePaymentDetails } from "../types";
@@ -185,10 +185,14 @@ export class StripeElement extends CustomElement implements IStripeElement{
         });
     }
 
-    protected HandleElementScopeCreated_({ scope, ...rest }: IElementScopeCreatedCallbackParams, postAttributesCallback?: () => void){
-        super.HandleElementScopeCreated_({ scope, ...rest }, postAttributesCallback);
-        scope.AddPostProcessCallback(() => (!this.defer && this.Mount()));
-        scope.AddUninitCallback(() => (this.stripe_ = null));
+    protected HandleElementScopeDestroyed_(scope: IElementScope): void {
+        super.HandleElementScopeDestroyed_(scope);
+        this.stripe_ = null;
+    }
+
+    protected HandlePostProcess_(): void {
+        super.HandlePostProcess_();
+        !this.defer && this.Mount();
     }
 
     protected PayOrSetup_(pay: boolean, clientSecret: string, save = false){

@@ -1,4 +1,4 @@
-import { EvaluateLater, IElementScopeCreatedCallbackParams, JournalError, JournalTry, JournalWarn } from "@benbraide/inlinejs";
+import { EvaluateLater, IElementScope, JournalError, JournalTry, JournalWarn } from "@benbraide/inlinejs";
 import { Property, RegisterCustomElement } from "@benbraide/inlinejs-element";
 
 import { IStripePaymentDetails, StripeFieldChangeHandlerType } from "../types";
@@ -64,77 +64,76 @@ export class StripeFieldElement extends StripeGenericField{
         (this.stripeField_ && (this.type === 'card' || this.type === 'number' || this.type === 'cardNumber')) && (details.method = this.stripeField_);
     }
 
-    protected HandleElementScopeCreated_({ scope, ...rest }: IElementScopeCreatedCallbackParams, postAttributesCallback?: () => void){
-        super.HandleElementScopeCreated_({ scope, ...rest }, postAttributesCallback);
+    protected HandleElementScopeDestroyed_(scope: IElementScope): void {
+        super.HandleElementScopeDestroyed_(scope);
+        this.GetStripe_()?.RemoveStripeField(this);
+        this.stripeField_ = null;
+    }
 
-        scope.AddPostProcessCallback(() => {
-            this.GetStripe_()?.WaitInstance().then((details) => {
-                if (!details?.stripe || !details.elements){
-                    return;
-                }
+    protected HandlePostProcess_(): void {
+        super.HandlePostProcess_();
+        
+        this.GetStripe_()?.WaitInstance().then((details) => {
+            if (!details?.stripe || !details.elements){
+                return;
+            }
 
-                let type = '';
-                if (['number', 'expiry', 'cvc'].includes(this.type)){
-                    type = `card${this.type.substring(0, 1).toUpperCase()}${this.type.substring(1)}`;
-                }
-                else if (['card', 'cardNumber', 'cardExpiry', 'cardCvc', 'postalCode', 'paymentRequestButton', 'iban', 'idealBank'].includes(this.type)){
-                    type = this.type;
-                }
+            let type = '';
+            if (['number', 'expiry', 'cvc'].includes(this.type)){
+                type = `card${this.type.substring(0, 1).toUpperCase()}${this.type.substring(1)}`;
+            }
+            else if (['card', 'cardNumber', 'cardExpiry', 'cardCvc', 'postalCode', 'paymentRequestButton', 'iban', 'idealBank'].includes(this.type)){
+                type = this.type;
+            }
 
-                if (!type){
-                    JournalWarn('The element type provided is invalid.', 'StripeField.Mount', this);
-                    return;
-                }
+            if (!type){
+                JournalWarn('The element type provided is invalid.', 'StripeField.Mount', this);
+                return;
+            }
+            
+            this.stripeField_ = details.elements.create((type as stripe.elements.elementsType), (this.options || this.GetStripe_()?.options || undefined));
+
+            this.stripeField_.on('ready', () => {
+                this.isReady_ = true;
+
+                this.oncustomready && EvaluateLater({
+                    componentId: this.componentId_,
+                    contextElement: this,
+                    expression: this.oncustomready,
+                    disableFunctionCall: false,
+                })();
                 
-                this.stripeField_ = details.elements.create((type as stripe.elements.elementsType), (this.options || this.GetStripe_()?.options || undefined));
+                this.readyWaiters_.splice(0).forEach(waiter => JournalTry(waiter));
+            });
 
-                this.stripeField_.on('ready', () => {
-                    this.isReady_ = true;
-
-                    this.oncustomready && EvaluateLater({
+            this.stripeField_.on('change', (event) => {
+                if ((event?.error || null) !== this.lastError_){
+                    this.lastError_ = (event?.error || null);
+                    this.oncustomerror && EvaluateLater({
                         componentId: this.componentId_,
                         contextElement: this,
-                        expression: this.oncustomready,
+                        expression: this.oncustomerror,
                         disableFunctionCall: false,
-                    })();
-                    
-                    this.readyWaiters_.splice(0).forEach(waiter => JournalTry(waiter));
-                });
+                    })(undefined, [this.lastError_], { error: this.lastError_ });
 
-                this.stripeField_.on('change', (event) => {
-                    if ((event?.error || null) !== this.lastError_){
-                        this.lastError_ = (event?.error || null);
-                        this.oncustomerror && EvaluateLater({
-                            componentId: this.componentId_,
-                            contextElement: this,
-                            expression: this.oncustomerror,
-                            disableFunctionCall: false,
-                        })(undefined, [this.lastError_], { error: this.lastError_ });
-
-                        this.changeListeners.forEach(listener => JournalTry(() => listener('error', this.lastError_)));
-                    }
-                    
-                    if ((event?.complete || false) != this.isComplete_){
-                        this.isComplete_ = (event?.complete || false);
-                        this.oncustomcomplete && EvaluateLater({
-                            componentId: this.componentId_,
-                            contextElement: this,
-                            expression: this.oncustomcomplete,
-                            disableFunctionCall: false,
-                        })(undefined, [this.isComplete_], { complete: this.isComplete_ });
-
-                        this.changeListeners.forEach(listener => JournalTry(() => listener('complete', this.isComplete_)));
-                    }
-                });
+                    this.changeListeners.forEach(listener => JournalTry(() => listener('error', this.lastError_)));
+                }
                 
-                this.stripeField_.mount(this);
-            }).catch(err => JournalError(err, 'StripeField.Mount', this));
-        });
+                if ((event?.complete || false) != this.isComplete_){
+                    this.isComplete_ = (event?.complete || false);
+                    this.oncustomcomplete && EvaluateLater({
+                        componentId: this.componentId_,
+                        contextElement: this,
+                        expression: this.oncustomcomplete,
+                        disableFunctionCall: false,
+                    })(undefined, [this.isComplete_], { complete: this.isComplete_ });
 
-        scope.AddUninitCallback(() => {
-            this.GetStripe_()?.RemoveStripeField(this);
-            this.stripeField_ = null;
-        });
+                    this.changeListeners.forEach(listener => JournalTry(() => listener('complete', this.isComplete_)));
+                }
+            });
+            
+            this.stripeField_.mount(this);
+        }).catch(err => JournalError(err, 'StripeField.Mount', this));
     }
 }
 

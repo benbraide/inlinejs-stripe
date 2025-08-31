@@ -1,5 +1,5 @@
 /// <reference types="stripe-v3" />
-import { IElementScopeCreatedCallbackParams } from "@benbraide/inlinejs";
+import { IElementScope } from "@benbraide/inlinejs";
 import { IStripePaymentDetails, StripeFieldChangeHandlerType } from "../types";
 import { StripeGenericField } from "./generic-field";
 export declare class StripeFieldElement extends StripeGenericField {
@@ -22,6 +22,7 @@ export declare class StripeFieldElement extends StripeGenericField {
     ToggleFocus(focused: boolean): void;
     Reset(): void;
     AddDetails(details: IStripePaymentDetails): void;
-    protected HandleElementScopeCreated_({ scope, ...rest }: IElementScopeCreatedCallbackParams, postAttributesCallback?: () => void): void;
+    protected HandleElementScopeDestroyed_(scope: IElementScope): void;
+    protected HandlePostProcess_(): void;
 }
 export declare function StripeFieldElementCompact(): void;

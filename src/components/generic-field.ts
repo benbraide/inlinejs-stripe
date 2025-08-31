@@ -1,4 +1,4 @@
-import { FindAncestor, IElementScopeCreatedCallbackParams } from "@benbraide/inlinejs";
+import { FindAncestor } from "@benbraide/inlinejs";
 import { CustomElement, Property } from "@benbraide/inlinejs-element";
 
 import { IStripeElement, IStripeField, IStripePaymentDetails, StripeFieldChangeHandlerType } from "../types";
@@ -25,11 +25,9 @@ export class StripeGenericField extends CustomElement implements IStripeField{
 
     public AddDetails(details: IStripePaymentDetails){}
 
-    protected HandleElementScopeCreated_({ scope, ...rest }: IElementScopeCreatedCallbackParams, postAttributesCallback?: () => void){
-        super.HandleElementScopeCreated_({ scope, ...rest }, () => {
-            this.GetStripe_()?.AddStripeField(this);
-            postAttributesCallback && postAttributesCallback();
-        });
+    protected HandlePostAttributesProcessPostfix_(): void {
+        super.HandlePostAttributesProcessPostfix_();
+        this.GetStripe_()?.AddStripeField(this);
     }
 
     protected GetStripe_(){

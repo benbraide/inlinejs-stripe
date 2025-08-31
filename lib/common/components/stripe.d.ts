@@ -1,5 +1,5 @@
 /// <reference types="stripe-v3" />
-import { IElementScopeCreatedCallbackParams } from "@benbraide/inlinejs";
+import { IElementScope } from "@benbraide/inlinejs";
 import { CustomElement } from "@benbraide/inlinejs-element";
 import { IStripeDetails, IStripeElement, IStripeField } from "../types";
 export declare class StripeElement extends CustomElement implements IStripeElement {
@@ -33,7 +33,8 @@ export declare class StripeElement extends CustomElement implements IStripeEleme
     Pay(clientSecret: string, save?: boolean): Promise<false | stripe.PaymentIntentResponse>;
     Setup(clientSecret: string): Promise<false | stripe.PaymentIntentResponse>;
     WaitReady(): Promise<void>;
-    protected HandleElementScopeCreated_({ scope, ...rest }: IElementScopeCreatedCallbackParams, postAttributesCallback?: () => void): void;
+    protected HandleElementScopeDestroyed_(scope: IElementScope): void;
+    protected HandlePostProcess_(): void;
     protected PayOrSetup_(pay: boolean, clientSecret: string, save?: boolean): Promise<false | stripe.PaymentIntentResponse>;
 }
 export declare function StripeElementCompact(): void;
